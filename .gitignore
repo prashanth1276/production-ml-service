@@ -25,5 +25,6 @@ Commands for Testing.txt  # If you want to exclude this file
 *.swp
 *~
 
+.pytest_cache/
 # Dependencies (if managed separately, e.g., via requirements.txt)
 # Note: Keep requirements.txt in the repo, so no need to ignore it
