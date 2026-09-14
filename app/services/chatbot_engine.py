@@ -1,105 +1,83 @@
-"""import requests
-from langchain.prompts import PromptTemplate
-from app.utils.db import db
+"""Chatbot engine: retrieves products, calls LLM, returns a response."""
 import logging
-from app.services.rec_engine import rec_engine  # Import rec_engine here
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class ChatbotEngine:
-    def __init__(self, model="llama3"):
-        self.model = model
-        self.ollama_url = "http://localhost:11434/api/generate"
-        self.prompt_template = PromptTemplate(
-            input_variables=["query", "context"],
-            template="You are a retail shopping assistant. The user asked: {query}\n"
-                     "Available products:\n{context}\n"
-                     "Provide a concise, friendly response in 2-3 sentences, recommending the most relevant products from the context."
-        )
-
-    def get_response(self, user_query: str):
-        logger.info(f"Received user query: {user_query}")
-        budget = None
-        if "under" in user_query.lower():
-            try:
-                budget = float(user_query.lower().split("under")[1].split()[0])
-            except:
-                pass
-        
-        product_ids = rec_engine.get_recommendations(user_query, top_k=5)  # Use rec_engine
-        products = db.get_products_by_ids(product_ids)
-        if budget:
-            products = [p for p in products if p.get("price", float("inf")) <= budget]
-        
-        context = "\n".join([f"- {p['name']}: {p['description']} (₹{p['price']})" for p in products])
-        if not context:
-            context = "No matching products found."
-        
-        prompt = self.prompt_template.format(query=user_query, context=context)
-        payload = {"model": self.model, "prompt": prompt, "stream": False}
-        try:
-            response = requests.post(self.ollama_url, json=payload)
-            response.raise_for_status()
-            result = response.json().get("response", "").strip()
-            return result.split("<|end_header_id>")[-1].strip() if "<|end_header_id>" in result else result
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ollama API error: {e}")
-            return f"Error: {e}"
-
-chatbot_engine = ChatbotEngine()
-"""
-
-import asyncio
-import requests
 from langchain.prompts import PromptTemplate
-from app.utils.db import db
-import logging
+
 from app.services.rec_engine import rec_engine
+from app.utils.db import db
+from app.utils.llm_client import get_llm_client
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+PROMPT = PromptTemplate(
+    input_variables=["query", "context"],
+    template=(
+        "You are a helpful retail assistant.\n"
+        "User query: {query}\n"
+        "Available products:\n{context}\n\n"
+        "Provide a friendly, concise recommendation in 2 sentences."
+    ),
+)
+
+
 class ChatbotEngine:
-    def __init__(self, model="llama3"):
-        self.model = model
-        self.ollama_url = "http://localhost:11434/api/generate"
-        self.prompt_template = PromptTemplate(
-            input_variables=["query", "context"],
-            template="Summarize products for: {query}\nContext: {context}\nRespond in 2 sentences."
+    def __init__(self):
+        self.llm = get_llm_client()
+
+    def _parse_budget(self, query: str) -> float | None:
+        if "under" not in query.lower():
+            return None
+        try:
+            return float(query.lower().split("under")[1].split()[0])
+        except (IndexError, ValueError):
+            return None
+
+    async def get_response(self, user_query: str, user_id: str | None = None) -> str:
+        budget = self._parse_budget(user_query)
+        product_ids = await rec_engine.get_recommendations(
+            user_query, user_id=user_id, top_k=5
+        )
+        products = db.get_products_by_ids(product_ids)
+
+        if budget is not None:
+            products = [
+                p for p in products if p.get("price", float("inf")) <= budget
+            ]
+
+        if products:
+            context = "\n".join(
+                f"- {p['name']}: {p.get('description', '')} (₹{p.get('price', 'N/A')})"
+                for p in products
+            )
+        else:
+            context = "No matching products found."
+
+        prompt = PROMPT.format(query=user_query, context=context)
+        return self.llm.generate(prompt, max_tokens=150)
+
+    async def get_batch_response(
+        self, queries: list[str], user_id: str | None = None
+    ) -> list[str]:
+        import asyncio
+        return await asyncio.gather(
+            *(self.get_response(q, user_id=user_id) for q in queries)
         )
 
-    async def get_response(self, user_query: str):
-        logger.info(f"Received user query: {user_query}")
-        budget = None
-        if "under" in user_query.lower():
-            try:
-                budget = float(user_query.lower().split("under")[1].split()[0])
-            except:
-                pass
-        
-        product_ids = await rec_engine.get_recommendations(user_query, top_k=5)
-        products = db.get_products_by_ids(product_ids)
-        if budget:
-            products = [p for p in products if p.get("price", float("inf")) <= budget]
-        
-        context = "\n".join([f"- {p['name']}: {p['description']} (₹{p['price']})" for p in products])
-        if not context:
-            context = "No matching products found."
-        
-        prompt = self.prompt_template.format(query=user_query, context=context)
-        payload = {"model": self.model, "prompt": prompt, "stream": False}
-        try:
-            response = requests.post(self.ollama_url, json=payload)
-            response.raise_for_status()
-            result = response.json().get("response", "").strip()
-            return result.split("<|end_header_id>")[-1].strip() if "<|end_header_id>" in result else result
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ollama API error: {e}")
-            return f"Error: {e}"
 
-    async def get_batch_response(self, queries: list[str]):
-        tasks = [self.get_response(query) for query in queries]
-        return await asyncio.gather(*tasks)
+_engine: ChatbotEngine | None = None
 
-chatbot_engine = ChatbotEngine()
+
+def get_chatbot_engine() -> ChatbotEngine:
+    global _engine
+    if _engine is None:
+        _engine = ChatbotEngine()
+    return _engine
+
+
+class _LazyChat:
+    def __getattr__(self, name):
+        return getattr(get_chatbot_engine(), name)
+
+
+chatbot_engine = _LazyChat()

@@ -8,20 +8,64 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017
       - REDIS_URL=redis://redis:6379
+      - RATE_LIMIT_ENABLED=true
+      - REDIS_ENABLED=true
+      - LLM_BACKEND=mock
+      - LOG_JSON=true
     depends_on:
       - mongo
       - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   mongo:
     image: mongo:6
     volumes:
       - mongo_data:/data/db
+    ports:
+      - "27017:27017"
 
   redis:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - web
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
 
 volumes:
   mongo_data:
-  redis_data: 
+  redis_data:
+  prometheus_data:
+  grafana_data:

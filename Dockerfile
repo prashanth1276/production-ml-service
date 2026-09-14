@@ -1,36 +1,35 @@
-# Builder stage
-FROM python:3.11-slim as builder
+# ---- Build stage ----
+FROM python:3.10-slim AS builder
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    libopenblas-dev && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /build
 
-WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --user -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Final image
-FROM python:3.11-slim
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    libgomp1 \
-    libopenblas64-0 && \
-    rm -rf /var/lib/apt/lists/*
+# ---- Runtime stage ----
+FROM python:3.10-slim
 
 WORKDIR /app
+
+# Copy installed packages from builder
 COPY --from=builder /root/.local /root/.local
-COPY . .
+ENV PATH=/root/.local/bin:$PATH
 
-ENV PATH=/root/.local/bin:$PATH \
-    PYTHONPATH=/app \
-    PYTHONUNBUFFERED=1 \
-    FAISS_NO_AVX2=1
+# Copy application
+COPY app/ ./app/
+COPY scripts/ ./scripts/
 
-HEALTHCHECK --interval=30s CMD curl -f http://localhost:8000/ || exit 1
+# Non-root user
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "app.main:app"]
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
