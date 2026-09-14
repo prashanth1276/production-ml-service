@@ -20,6 +20,7 @@ jobs:
       RATE_LIMIT_ENABLED: "false"
       REDIS_ENABLED: "false"
       MONGO_URI: mongodb://localhost:27017
+      REDIS_URL: redis://localhost:6379
       LOG_JSON: "true"
 
     steps:
@@ -64,3 +65,53 @@ jobs:
           tags: retail-ai-api:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        
+  compose-smoke-test:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "App is up"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 5
+          done
+
+      - name: Seed the database
+        run: docker compose exec -T web python scripts/seed_db.py
+
+      - name: Verify endpoints
+        run: |
+          curl -f http://localhost:8000/health
+          curl -f http://localhost:8000/ready
+          curl -f "http://localhost:8000/api/recommendations?query=running+shoes&top_k=5"
+          curl -f -X POST http://localhost:8000/api/conversation \
+            -H "Content-Type: application/json" \
+            -d '{"message":"shoes under 500"}'
+          curl -f http://localhost:8000/metrics | grep index_size_products
+
+      - name: Verify Prometheus is scraping
+        run: |
+          sleep 20
+          curl -sf http://localhost:9090/api/v1/targets | grep -q '"health":"up"'
+
+      - name: Verify Grafana is up
+        run: |
+          curl -sf http://localhost:3000/api/health | grep -q '"database": "ok"'
+
+      - name: Show compose logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
