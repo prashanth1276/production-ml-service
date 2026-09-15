@@ -80,14 +80,20 @@ jobs:
           for i in {1..30}; do
             if curl -sf http://localhost:8000/health > /dev/null; then
               echo "App is up"
-              break
+              exit 0
             fi
+
             echo "Waiting... ($i/30)"
             sleep 5
           done
 
+          echo "Application failed to become healthy"
+          docker compose ps
+          docker compose logs web
+          exit 1
+
       - name: Seed the database
-        run: docker compose exec -T web python scripts/seed_db.py
+        run: docker compose run --rm web python scripts/seed_db.py
 
       - name: Verify endpoints
         run: |

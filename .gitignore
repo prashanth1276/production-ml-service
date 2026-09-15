@@ -17,14 +17,13 @@ __pycache__/
 # OS generated files
 Thumbs.db
 
-# Docker and testing artifacts (optional, adjust as needed)
+# Logs and testing artifacts
 *.log
-Commands for Testing.txt  # If you want to exclude this file
+.pytest_cache/
 
-# Ignore large binary files or temporary files (if any)
+# Ignore large binary files or temporary files
 *.swp
 *~
 
-.pytest_cache/
-# Dependencies (if managed separately, e.g., via requirements.txt)
-# Note: Keep requirements.txt in the repo, so no need to ignore it
+# Dependencies are managed via requirements.txt
+# (do not ignore requirements.txt)

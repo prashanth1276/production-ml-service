@@ -3,6 +3,7 @@ import os
 
 os.environ["LLM_BACKEND"] = "mock"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["REDIS_ENABLED"] = "false"
 
 import pytest
 from fastapi.testclient import TestClient

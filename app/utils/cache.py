@@ -23,6 +23,8 @@ def get_redis() -> redis.Redis:
 
 
 async def cache_get(key: str) -> bytes | None:
+    if not get_settings().redis_enabled:
+        return None
     try:
         return await get_redis().get(key)
     except Exception as e:
@@ -31,6 +33,8 @@ async def cache_get(key: str) -> bytes | None:
 
 
 async def cache_set(key: str, value: bytes | str, ttl: int = 3600) -> bool:
+    if not get_settings().redis_enabled:
+        return False
     try:
         if isinstance(value, str):
             value = value.encode()
@@ -42,6 +46,8 @@ async def cache_set(key: str, value: bytes | str, ttl: int = 3600) -> bool:
 
 
 async def cache_ping() -> bool:
+    if not get_settings().redis_enabled:
+        return False
     try:
         await get_redis().ping()
         return True

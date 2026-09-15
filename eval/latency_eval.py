@@ -1,7 +1,3 @@
-import os
-os.environ["REDIS_ENABLED"] = "false"
-os.environ["RATE_LIMIT_ENABLED"] = "false"
-
 """Profile latency of each endpoint.
 
 Reports p50, p95, p99, and mean for:
@@ -11,6 +7,10 @@ Reports p50, p95, p99, and mean for:
 
 Run:  python -m eval.latency_eval
 """
+import os
+os.environ["REDIS_ENABLED"] = "false"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+
 import csv
 import statistics
 import time

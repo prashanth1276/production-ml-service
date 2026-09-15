@@ -15,7 +15,12 @@ from app.utils.config import get_settings
 
 def main():
     settings = get_settings()
-    client = MongoClient(settings.mongo_uri)
+    client = MongoClient(
+        settings.mongo_uri,
+        serverSelectionTimeoutMS=5000,
+    )
+
+    client.admin.command("ping")
     db = client["retail_db"]
 
     utils = Path(__file__).resolve().parent.parent / "app" / "utils"

@@ -1,26 +1,36 @@
-version: '3.8'
-
 services:
+
   web:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - MONGO_URI=mongodb://mongo:27017
-      - REDIS_URL=redis://redis:6379
-      - RATE_LIMIT_ENABLED=true
-      - REDIS_ENABLED=true
-      - LLM_BACKEND=mock
-      - LOG_JSON=true
+      MONGO_URI: mongodb://mongo:27017
+      REDIS_URL: redis://redis:6379
+      RATE_LIMIT_ENABLED: "true"
+      REDIS_ENABLED: "true"
+      LLM_BACKEND: mock
+      LOG_JSON: "true"
     depends_on:
-      - mongo
-      - redis
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
+        ]
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app_network
+
 
   mongo:
     image: mongo:6
@@ -28,6 +38,15 @@ services:
       - mongo_data:/data/db
     ports:
       - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app_network
+
 
   redis:
     image: redis:7-alpine
@@ -35,6 +54,15 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - app_network
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -47,7 +75,11 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+    networks:
+      - app_network
+
 
   grafana:
     image: grafana/grafana:latest
@@ -58,14 +90,22 @@ services:
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
       - grafana_data:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
+    networks:
+      - app_network
+
 
 volumes:
   mongo_data:
   redis_data:
   prometheus_data:
   grafana_data:
+
+
+networks:
+  app_network:

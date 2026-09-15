@@ -1,4 +1,5 @@
 """Chatbot engine: retrieves products, calls LLM, returns a response."""
+import asyncio
 import logging
 
 from langchain.prompts import PromptTemplate
@@ -59,7 +60,6 @@ class ChatbotEngine:
     async def get_batch_response(
         self, queries: list[str], user_id: str | None = None
     ) -> list[str]:
-        import asyncio
         return await asyncio.gather(
             *(self.get_response(q, user_id=user_id) for q in queries)
         )

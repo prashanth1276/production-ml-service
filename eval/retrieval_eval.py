@@ -1,16 +1,15 @@
-import os
-os.environ["REDIS_ENABLED"] = "false"
-os.environ["RATE_LIMIT_ENABLED"] = "false"
-
 """Evaluate retrieval quality across configurations.
 
 Configurations compared:
   1. baseline:      raw query, no user context
   2. user_context:  query + user purchase history + preferences
-  3. category_only: baseline but filtered to a single category
 
 Run:  python -m eval.retrieval_eval
 """
+import os
+os.environ["REDIS_ENABLED"] = "false"
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+
 import csv
 from pathlib import Path
 

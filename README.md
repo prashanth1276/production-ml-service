@@ -114,11 +114,13 @@ cd production-ml-service
 docker compose up --build
 ```
 
-This starts three containers:
+This starts five containers:
 
 - **web** — FastAPI app at http://localhost:8000
 - **mongo** — MongoDB at localhost:27017
 - **redis** — Redis at localhost:6379
+- **prometheus** — metrics scraper at http://localhost:9090
+- **grafana** — dashboards at http://localhost:3000 (admin / admin)
 
 Seed the product catalog:
 
@@ -328,8 +330,6 @@ production-ml-service/
   eval finding (context degrades NDCG by 22 points).
 - **Real LLM integration:** Deploy Ollama in the Docker Compose stack for
   end-to-end LLM evaluation.
-- **Prometheus + Grafana stack:** Extend `docker-compose.yml` to include
-  Prometheus scraping and a Grafana dashboard.
 - **Auth + rate limiting per user:** Currently rate limiting is per-IP via
   `fastapi-limiter`. Production would use API keys or JWT.
 - **Load testing:** Integrate Locust to measure throughput under sustained load.
