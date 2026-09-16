@@ -40,7 +40,7 @@ jobs:
           pip install ruff
 
       - name: Lint with ruff
-        run: ruff check app/ eval/ --output-format=github || true
+        run: ruff check app/ eval/ --output-format=github
 
       - name: Run tests
         run: pytest app/tests/ -v
@@ -69,8 +69,17 @@ jobs:
   compose-smoke-test:
     name: Docker Compose smoke test
     runs-on: ubuntu-latest
+
+    env:
+      GRAFANA_ADMIN_USER: admin
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create CI secrets
+        run: |
+          mkdir -p secrets
+          printf '%s' 'ci-test-grafana-password' > secrets/grafana_admin_password.txt
 
       - name: Build and start the stack
         run: docker compose up -d --build
@@ -82,11 +91,9 @@ jobs:
               echo "App is up"
               exit 0
             fi
-
             echo "Waiting... ($i/30)"
             sleep 5
           done
-
           echo "Application failed to become healthy"
           docker compose ps
           docker compose logs web
@@ -100,9 +107,11 @@ jobs:
           curl -f http://localhost:8000/health
           curl -f http://localhost:8000/ready
           curl -f "http://localhost:8000/api/recommendations?query=running+shoes&top_k=5"
+
           curl -f -X POST http://localhost:8000/api/conversation \
             -H "Content-Type: application/json" \
             -d '{"message":"shoes under 500"}'
+
           curl -f http://localhost:8000/metrics | grep index_size_products
 
       - name: Verify Prometheus is scraping
