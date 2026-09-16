@@ -1,4 +1,5 @@
 """Semantic search recommendation engine using FAISS + sentence-transformers."""
+
 import asyncio
 import json
 import logging
@@ -10,10 +11,14 @@ import redis.asyncio as redis
 from sentence_transformers import SentenceTransformer
 
 from app.utils.config import get_settings
-from app.utils.metrics import (
-    CACHE_HIT, CACHE_MISS, INDEX_SIZE, RECOMMENDATION_COUNT, RETRIEVAL_LATENCY,
-)
 from app.utils.db import db
+from app.utils.metrics import (
+    CACHE_HIT,
+    CACHE_MISS,
+    INDEX_SIZE,
+    RECOMMENDATION_COUNT,
+    RETRIEVAL_LATENCY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +65,7 @@ class RecommendationEngine:
     ) -> list[str]:
         """Sync wrapper for get_recommendations."""
         try:
-            return asyncio.run(
-                self.get_recommendations(user_query, user_id=user_id, top_k=top_k)
-            )
+            return asyncio.run(self.get_recommendations(user_query, user_id=user_id, top_k=top_k))
         except RuntimeError:
             loop = asyncio.new_event_loop()
             try:
@@ -93,14 +96,10 @@ class RecommendationEngine:
 
             cached = await self._cache_get(EMBEDDING_CACHE_KEY)
             if cached:
-                embeddings = np.frombuffer(cached, dtype=np.float32).reshape(
-                    -1, EMBEDDING_DIM
-                )
+                embeddings = np.frombuffer(cached, dtype=np.float32).reshape(-1, EMBEDDING_DIM)
                 logger.info(f"Loaded {len(embeddings)} embeddings from cache")
             else:
-                texts = [
-                    f"{p['name']} {p.get('description', '')}" for p in products
-                ]
+                texts = [f"{p['name']} {p.get('description', '')}" for p in products]
                 embeddings = self.model.encode(
                     texts,
                     convert_to_numpy=True,
@@ -190,9 +189,7 @@ class RecommendationEngine:
 
         k = min(top_k, self.index.ntotal)
         _, indices = self.index.search(q_emb, k)
-        recommended = [
-            self.product_ids[i] for i in indices[0] if 0 <= i < len(self.product_ids)
-        ]
+        recommended = [self.product_ids[i] for i in indices[0] if 0 <= i < len(self.product_ids)]
 
         RETRIEVAL_LATENCY.observe(_time.perf_counter() - _t0)
         RECOMMENDATION_COUNT.inc(len(recommended))

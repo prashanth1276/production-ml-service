@@ -1,4 +1,5 @@
 """JSON structured logging. Machine-parseable for log aggregation."""
+
 import json
 import logging
 import sys
@@ -37,10 +38,6 @@ def configure_logging(level: str = "INFO", json_output: bool = True) -> None:
     if json_output:
         handler.setFormatter(JSONFormatter())
     else:
-        handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)s %(name)s: %(message)s"
-            )
-        )
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     root.addHandler(handler)
     root.setLevel(level)

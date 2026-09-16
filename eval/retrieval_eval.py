@@ -6,7 +6,9 @@ Configurations compared:
 
 Run:  python -m eval.retrieval_eval
 """
+
 import os
+
 os.environ["REDIS_ENABLED"] = "false"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 
@@ -17,10 +19,12 @@ import numpy as np
 
 from app.services.rec_engine import RecommendationEngine
 from eval.metrics import (
-    ndcg_at_k, precision_at_k, recall_at_k, reciprocal_rank,
+    ndcg_at_k,
+    precision_at_k,
+    recall_at_k,
+    reciprocal_rank,
 )
 from eval.test_queries import TEST_QUERIES
-
 
 K = 5  # evaluate at top-5
 
@@ -59,7 +63,7 @@ def main():
 
     results = []
 
-    print(f"\n[1/2] Baseline (raw query, no user context)")
+    print("\n[1/2] Baseline (raw query, no user context)")
     baseline = evaluate_config(engine, TEST_QUERIES, use_user_context=False)
     baseline["config"] = "baseline"
     results.append(baseline)
@@ -68,7 +72,7 @@ def main():
     print(f"      Recall@5:    {baseline['recall@5']:.3f}")
     print(f"      MRR:         {baseline['mrr']:.3f}")
 
-    print(f"\n[2/2] User-context-augmented (query + history + preferences)")
+    print("\n[2/2] User-context-augmented (query + history + preferences)")
     with_ctx = evaluate_config(engine, TEST_QUERIES, use_user_context=True)
     with_ctx["config"] = "user_context"
     results.append(with_ctx)
@@ -93,8 +97,10 @@ def main():
     print(f"{'config':<20} {'NDCG@5':<10} {'P@5':<10} {'R@5':<10} {'MRR':<10}")
     print("-" * 60)
     for r in results:
-        print(f"{r['config']:<20} {r['ndcg@5']:<10.3f} {r['precision@5']:<10.3f} "
-              f"{r['recall@5']:<10.3f} {r['mrr']:<10.3f}")
+        print(
+            f"{r['config']:<20} {r['ndcg@5']:<10.3f} {r['precision@5']:<10.3f} "
+            f"{r['recall@5']:<10.3f} {r['mrr']:<10.3f}"
+        )
     print("=" * 60)
 
 

@@ -42,6 +42,9 @@ jobs:
       - name: Lint with ruff
         run: ruff check app/ eval/ --output-format=github
 
+      - name: Check formatting with ruff
+        run: ruff format --check app/ eval/
+
       - name: Run tests
         run: pytest app/tests/ -v
 

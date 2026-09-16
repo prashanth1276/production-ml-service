@@ -1,4 +1,5 @@
 """Central configuration loaded from environment variables."""
+
 import os
 from functools import lru_cache
 
@@ -22,17 +23,13 @@ class Settings:
 
         self.rate_limit_times = int(os.getenv("RATE_LIMIT_TIMES", "10"))
         self.rate_limit_seconds = int(os.getenv("RATE_LIMIT_SECONDS", "60"))
-        self.rate_limit_enabled = os.getenv(
-            "RATE_LIMIT_ENABLED", "true"
-        ).lower() == "true"
+        self.rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
 
-        self.redis_enabled = os.getenv(
-            "REDIS_ENABLED", "true"
-        ).lower() == "true"
+        self.redis_enabled = os.getenv("REDIS_ENABLED", "true").lower() == "true"
 
         self.cors_origins = [
-            o.strip() for o in
-            os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+            o.strip()
+            for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
             if o.strip()
         ]
 

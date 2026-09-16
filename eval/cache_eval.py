@@ -9,7 +9,9 @@ pipeline or return a cached response.
 
 Run:  python -m eval.cache_eval
 """
+
 import os
+
 os.environ["REDIS_ENABLED"] = "false"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 
@@ -33,8 +35,8 @@ def main():
     print("CACHE ABLATION")
     print("=" * 60)
 
-    from app.services.rec_engine import get_rec_engine
     from app.main import app
+    from app.services.rec_engine import get_rec_engine
 
     query = "running shoes"
     n = 20
@@ -87,7 +89,7 @@ def main():
     print(f"\n  Cold mean:  {cold_mean:.2f} ms   (p95: {cold_p95:.2f} ms)")
     print(f"  Warm mean:  {warm_mean:.2f} ms   (p95: {warm_p95:.2f} ms)")
     print(f"  Speedup:    {speedup:.2f}x")
-    print(f"\n✓ Saved results/cache_eval.csv")
+    print("\n✓ Saved results/cache_eval.csv")
     print("=" * 60)
 
 

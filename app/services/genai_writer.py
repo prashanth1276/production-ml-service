@@ -1,4 +1,5 @@
 """Product description generator using LLM."""
+
 import logging
 
 from langchain.prompts import PromptTemplate
@@ -24,9 +25,7 @@ class DescriptionGenerator:
     def __init__(self):
         self.llm = get_llm_client()
 
-    def generate_description(
-        self, name: str, category: str, material: str
-    ) -> str:
+    def generate_description(self, name: str, category: str, material: str) -> str:
         prompt = PROMPT.format(name=name, category=category, material=material)
         return self.llm.generate(prompt, max_tokens=200)
 

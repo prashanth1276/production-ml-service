@@ -1,4 +1,5 @@
 """Chatbot engine: retrieves products, calls LLM, returns a response."""
+
 import asyncio
 import logging
 
@@ -36,15 +37,11 @@ class ChatbotEngine:
 
     async def get_response(self, user_query: str, user_id: str | None = None) -> str:
         budget = self._parse_budget(user_query)
-        product_ids = await rec_engine.get_recommendations(
-            user_query, user_id=user_id, top_k=5
-        )
+        product_ids = await rec_engine.get_recommendations(user_query, user_id=user_id, top_k=5)
         products = db.get_products_by_ids(product_ids)
 
         if budget is not None:
-            products = [
-                p for p in products if p.get("price", float("inf")) <= budget
-            ]
+            products = [p for p in products if p.get("price", float("inf")) <= budget]
 
         if products:
             context = "\n".join(
@@ -57,12 +54,8 @@ class ChatbotEngine:
         prompt = PROMPT.format(query=user_query, context=context)
         return self.llm.generate(prompt, max_tokens=150)
 
-    async def get_batch_response(
-        self, queries: list[str], user_id: str | None = None
-    ) -> list[str]:
-        return await asyncio.gather(
-            *(self.get_response(q, user_id=user_id) for q in queries)
-        )
+    async def get_batch_response(self, queries: list[str], user_id: str | None = None) -> list[str]:
+        return await asyncio.gather(*(self.get_response(q, user_id=user_id) for q in queries))
 
 
 _engine: ChatbotEngine | None = None

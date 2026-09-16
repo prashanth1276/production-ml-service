@@ -2,6 +2,7 @@
 
 Mock mode lets tests, CI, and fresh-clone setups run without requiring Ollama.
 """
+
 import logging
 from abc import ABC, abstractmethod
 
@@ -14,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 class LLMClient(ABC):
     @abstractmethod
-    def generate(self, prompt: str, max_tokens: int = 256) -> str:
-        ...
+    def generate(self, prompt: str, max_tokens: int = 256) -> str: ...
 
 
 class OllamaClient(LLMClient):

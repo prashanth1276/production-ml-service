@@ -1,4 +1,5 @@
 """Integration tests for API endpoints. Uses mock LLM and stub DB."""
+
 from unittest.mock import patch
 
 
@@ -31,9 +32,13 @@ def test_ready_reports_checks(client):
 
 
 def test_recommendations_endpoint(client, sample_products):
-    with patch("app.utils.db.db.get_products", return_value=sample_products), \
-         patch("app.utils.db.db.get_products_by_ids",
-               side_effect=lambda ids: [p for p in sample_products if p["id"] in ids]):
+    with (
+        patch("app.utils.db.db.get_products", return_value=sample_products),
+        patch(
+            "app.utils.db.db.get_products_by_ids",
+            side_effect=lambda ids: [p for p in sample_products if p["id"] in ids],
+        ),
+    ):
         r = client.get("/api/recommendations?query=sneakers&top_k=3")
         assert r.status_code == 200
         body = r.json()
@@ -54,9 +59,7 @@ def test_chat_single_message(client):
 
 
 def test_chat_batch_messages(client):
-    r = client.post(
-        "/api/conversation", json={"message": ["hi", "hello"]}
-    )
+    r = client.post("/api/conversation", json={"message": ["hi", "hello"]})
     assert r.status_code == 200
     assert "replies" in r.json()
     assert len(r.json()["replies"]) == 2

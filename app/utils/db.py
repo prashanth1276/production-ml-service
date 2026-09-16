@@ -1,4 +1,5 @@
 """MongoDB access layer."""
+
 import logging
 
 from pymongo import MongoClient
@@ -54,11 +55,7 @@ class Database:
         if not product_ids:
             return []
         try:
-            return list(
-                self.products.find(
-                    {"id": {"$in": product_ids}}, {"_id": 0}
-                )
-            )
+            return list(self.products.find({"id": {"$in": product_ids}}, {"_id": 0}))
         except PyMongoError as e:
             logger.error(f"get_products_by_ids failed: {e}")
             return []

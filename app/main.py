@@ -1,4 +1,5 @@
 """FastAPI application entrypoint."""
+
 import time
 import uuid
 
@@ -15,19 +16,23 @@ from app.utils.config import get_settings
 from app.utils.db import db
 from app.utils.logging_config import configure_logging
 from app.utils.metrics import (
-    ACTIVE_REQUESTS, REQUEST_COUNT, REQUEST_LATENCY,
+    ACTIVE_REQUESTS,
+    REQUEST_COUNT,
+    REQUEST_LATENCY,
 )
 
 settings = get_settings()
 
 # Use JSON logs by default; human-readable in dev
 import os
+
 configure_logging(
     level=settings.log_level,
     json_output=os.getenv("LOG_JSON", "true").lower() == "true",
 )
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -61,9 +66,7 @@ async def instrument_request(request: Request, call_next):
         response = await call_next(request)
     except Exception:
         ACTIVE_REQUESTS.dec()
-        REQUEST_COUNT.labels(
-            method=request.method, endpoint=path, status="500"
-        ).inc()
+        REQUEST_COUNT.labels(method=request.method, endpoint=path, status="500").inc()
         raise
 
     ACTIVE_REQUESTS.dec()
@@ -135,10 +138,14 @@ def metrics():
 
 # ---- Routes ----
 if settings.rate_limit_enabled:
-    rl = [Depends(RateLimiter(
-        times=settings.rate_limit_times,
-        seconds=settings.rate_limit_seconds,
-    ))]
+    rl = [
+        Depends(
+            RateLimiter(
+                times=settings.rate_limit_times,
+                seconds=settings.rate_limit_seconds,
+            )
+        )
+    ]
 else:
     rl = []
 

@@ -14,9 +14,7 @@ router = APIRouter()
 
 
 @router.get("/description", summary="Generate product description")
-async def get_description(
-    product_id: str = Query(..., description="Product ID")
-):
+async def get_description(product_id: str = Query(..., description="Product ID")):
     if not product_id or not isinstance(product_id, str):
         raise HTTPException(status_code=422, detail="Invalid product ID format")
 

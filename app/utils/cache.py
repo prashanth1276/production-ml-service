@@ -1,4 +1,5 @@
 """Redis cache helpers. Fail-safe: returns None on connection errors."""
+
 import logging
 
 import redis.asyncio as redis

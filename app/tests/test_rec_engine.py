@@ -1,4 +1,5 @@
 """Unit tests for the recommendation engine (FAISS + embeddings)."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,9 +25,12 @@ def mock_redis():
 
 @pytest.mark.asyncio
 async def test_engine_builds_index(fake_products, mock_redis):
-    with patch("app.utils.db.db.get_products", return_value=fake_products), \
-         patch("redis.asyncio.from_url", return_value=mock_redis):
+    with (
+        patch("app.utils.db.db.get_products", return_value=fake_products),
+        patch("redis.asyncio.from_url", return_value=mock_redis),
+    ):
         from app.services.rec_engine import RecommendationEngine
+
         engine = RecommendationEngine()
         await engine._build_index()
         assert engine.index is not None
@@ -36,9 +40,12 @@ async def test_engine_builds_index(fake_products, mock_redis):
 
 @pytest.mark.asyncio
 async def test_engine_handles_empty_catalog(mock_redis):
-    with patch("app.utils.db.db.get_products", return_value=[]), \
-         patch("redis.asyncio.from_url", return_value=mock_redis):
+    with (
+        patch("app.utils.db.db.get_products", return_value=[]),
+        patch("redis.asyncio.from_url", return_value=mock_redis),
+    ):
         from app.services.rec_engine import RecommendationEngine
+
         engine = RecommendationEngine()
         await engine._build_index()
         assert engine.index is not None
@@ -49,10 +56,13 @@ async def test_engine_handles_empty_catalog(mock_redis):
 
 @pytest.mark.asyncio
 async def test_engine_returns_top_k(fake_products, mock_redis):
-    with patch("app.utils.db.db.get_products", return_value=fake_products), \
-         patch("app.utils.db.db.get_user", return_value=None), \
-         patch("redis.asyncio.from_url", return_value=mock_redis):
+    with (
+        patch("app.utils.db.db.get_products", return_value=fake_products),
+        patch("app.utils.db.db.get_user", return_value=None),
+        patch("redis.asyncio.from_url", return_value=mock_redis),
+    ):
         from app.services.rec_engine import RecommendationEngine
+
         engine = RecommendationEngine()
         recs = await engine.get_recommendations("shoes", top_k=2)
         assert len(recs) <= 2

@@ -7,7 +7,9 @@ Reports p50, p95, p99, and mean for:
 
 Run:  python -m eval.latency_eval
 """
+
 import os
+
 os.environ["REDIS_ENABLED"] = "false"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 
@@ -19,7 +21,6 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.main import app
-
 
 N_RUNS = 30
 
@@ -61,22 +62,21 @@ def main():
     with TestClient(app) as client:
         results = []
 
-        print(f"\n[1/3] /health")
+        print("\n[1/3] /health")
         r = measure("health", lambda: client.get("/health"))
         results.append(r)
 
-        print(f"[2/3] /api/recommendations (retrieval only)")
+        print("[2/3] /api/recommendations (retrieval only)")
         r = measure(
             "recommendations",
             lambda: client.get("/api/recommendations?query=running+shoes&top_k=5"),
         )
         results.append(r)
 
-        print(f"[3/3] /api/conversation (retrieval + LLM)")
+        print("[3/3] /api/conversation (retrieval + LLM)")
         r = measure(
             "conversation",
-            lambda: client.post("/api/conversation",
-                                json={"message": "shoes under 500"}),
+            lambda: client.post("/api/conversation", json={"message": "shoes under 500"}),
         )
         results.append(r)
 
@@ -84,9 +84,17 @@ def main():
     Path("results").mkdir(exist_ok=True)
     out = "results/latency_profile.csv"
     with open(out, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "endpoint", "n", "mean_ms", "p50_ms", "p95_ms", "p99_ms",
-        ])
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "endpoint",
+                "n",
+                "mean_ms",
+                "p50_ms",
+                "p95_ms",
+                "p99_ms",
+            ],
+        )
         writer.writeheader()
         writer.writerows(results)
     print(f"\n✓ Saved {out}")
@@ -95,8 +103,10 @@ def main():
     print(f"{'endpoint':<20} {'mean':<10} {'p50':<10} {'p95':<10} {'p99':<10}")
     print("-" * 60)
     for r in results:
-        print(f"{r['endpoint']:<20} {r['mean_ms']:<10.2f} "
-              f"{r['p50_ms']:<10.2f} {r['p95_ms']:<10.2f} {r['p99_ms']:<10.2f}")
+        print(
+            f"{r['endpoint']:<20} {r['mean_ms']:<10.2f} "
+            f"{r['p50_ms']:<10.2f} {r['p95_ms']:<10.2f} {r['p99_ms']:<10.2f}"
+        )
     print("=" * 60)
     print("(all values in ms)")
 

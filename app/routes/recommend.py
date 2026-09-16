@@ -12,9 +12,7 @@ async def get_recommendations(
     top_k: int = Query(3, ge=1, le=20),
 ):
     try:
-        recommendations = await rec_engine.get_recommendations(
-            query, user_id=user_id, top_k=top_k
-        )
+        recommendations = await rec_engine.get_recommendations(query, user_id=user_id, top_k=top_k)
         return {"recommendations": recommendations, "count": len(recommendations)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Recommendation error: {e}")

@@ -2,8 +2,8 @@
 
 These are module-level (created once) and shared across the app.
 """
-from prometheus_client import Counter, Histogram, Gauge
 
+from prometheus_client import Counter, Gauge, Histogram
 
 # ---- Counters ----
 REQUEST_COUNT = Counter(
