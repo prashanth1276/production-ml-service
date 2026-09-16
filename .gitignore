@@ -8,6 +8,7 @@ __pycache__/
 
 # Environment variables
 .env
+secrets/
 
 # IDE and editor files
 *.vscode/

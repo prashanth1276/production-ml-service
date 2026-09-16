@@ -3,7 +3,7 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: "retail-ai-api"
+  - job_name: "production-ml-service"
     static_configs:
       - targets: ["web:8000"]
     metrics_path: /metrics

@@ -173,7 +173,9 @@ class RecommendationEngine:
         cached = await self._cache_get(cache_key)
         if cached:
             try:
-                return json.loads(cached)
+                recommended = json.loads(cached)
+                RECOMMENDATION_COUNT.inc(len(recommended))
+                return recommended
             except json.JSONDecodeError:
                 pass
 

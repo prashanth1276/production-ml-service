@@ -154,11 +154,11 @@
   ],
   "refresh": "10s",
   "schemaVersion": 39,
-  "tags": ["retail-ai"],
+  "tags": ["production-ml-service"],
   "templating": {"list": []},
   "time": {"from": "now-15m", "to": "now"},
   "timezone": "browser",
-  "title": "Retail AI Platform",
-  "uid": "retail-ai-main",
+  "title": "Production ML Service",
+  "uid": "production-ml-service-main",
   "version": 1
 }

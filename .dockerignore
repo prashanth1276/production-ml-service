@@ -6,6 +6,7 @@ __pycache__/
 .gitignore
 .env
 .env.*
+secrets/
 !.env.example
 venv/
 env/
