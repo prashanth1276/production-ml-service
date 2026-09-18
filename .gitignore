@@ -1,5 +1,5 @@
 # Virtual environment
-venv/
+.venv/
 env/
 
 # Python bytecode and cache
@@ -8,7 +8,12 @@ __pycache__/
 
 # Environment variables
 .env
-secrets/
+secrets/*
+!secrets/.gitkeep
+
+# Generated evaluation outputs
+results/*
+!results/.gitkeep
 
 # IDE and editor files
 .ruff_cache/

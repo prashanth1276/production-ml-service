@@ -26,9 +26,10 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-# Copy application
+# Copy application and config
 COPY app/ ./app/
 COPY scripts/ ./scripts/
+COPY pytest.ini ./pytest.ini
 
 # Non-root user
 RUN useradd -m -u 1000 appuser \

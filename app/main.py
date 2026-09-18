@@ -10,6 +10,7 @@ from fastapi_limiter import FastAPILimiter
 from fastapi_limiter.depends import RateLimiter
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from app.middleware.auth import APIKeyMiddleware
 from app.routes import chat, describe, recommend
 from app.utils.cache import cache_ping, get_redis
 from app.utils.config import get_settings
@@ -40,6 +41,10 @@ app = FastAPI(
     description="AI-powered retail backend.",
     version=settings.app_version,
 )
+
+# Auth middleware added first (inner), CORS added second (outer, runs first).
+# Order matters: CORS must run before auth to handle preflight requests.
+app.add_middleware(APIKeyMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
