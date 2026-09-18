@@ -1,17 +1,33 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+
+# Git
 .git/
 .gitignore
+
+# Environment
 .env
 .env.*
-secrets/
-!.env.example
+
+# Secrets (mounted via Compose, not baked into the image)
+secrets/*
+!secrets/.gitkeep
+
+# Virtual environments
 .venv/
 env/
+venv/
+
+# Logs
 *.log
+
+# Generated outputs
 results/
 docs/_build/
+
+# Docs not needed in the image
 README.md

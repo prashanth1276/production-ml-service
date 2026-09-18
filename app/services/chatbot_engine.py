@@ -145,7 +145,7 @@ class ChatbotEngine:
 
         return self.llm.generate(
             prompt,
-            max_tokens=150,
+            max_tokens=500,
         )
 
     async def get_batch_response(

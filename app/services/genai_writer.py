@@ -38,7 +38,7 @@ class DescriptionGenerator:
 
         return self.llm.generate(
             prompt,
-            max_tokens=150,
+            max_tokens=500,
         )
 
 
