@@ -1,7 +1,8 @@
 """Seed MongoDB with products and users. Run once before starting the API.
 
-    python scripts/seed_db.py
+python scripts/seed_db.py
 """
+
 import json
 import sys
 from pathlib import Path

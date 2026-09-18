@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 class LLMClient(ABC):
     @abstractmethod
-    def generate(self, prompt: str, max_tokens: int = 256) -> str:
-        ...
+    def generate(self, prompt: str, max_tokens: int = 256) -> str: ...
 
 
 class OpenAICompatibleClient(LLMClient):
@@ -71,11 +70,7 @@ class OpenAICompatibleClient(LLMClient):
             text = message.get("content", "")
 
             if isinstance(text, list):
-                text = "".join(
-                    part.get("text", "")
-                    for part in text
-                    if isinstance(part, dict)
-                )
+                text = "".join(part.get("text", "") for part in text if isinstance(part, dict))
 
             return str(text).strip()
 

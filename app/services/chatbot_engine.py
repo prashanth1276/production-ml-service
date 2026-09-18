@@ -7,7 +7,6 @@ from app.services.rec_engine import rec_engine
 from app.utils.db import db
 from app.utils.llm_client import get_llm_client
 
-
 PROMPT_TEMPLATE = (
     "You are a helpful retail assistant.\n\n"
     "User query:\n{query}\n\n"
@@ -32,7 +31,6 @@ class ChatbotEngine:
             r"(?:under|below|less\s+than)"
             r"\s*₹?\s*(?:rs\.?|inr)?\s*"
             r"(\d+(?:\.\d+)?)",
-
             r"(?:₹|rs\.?|inr)\s*"
             r"(\d+(?:\.\d+)?)"
             r"\s*(?:or\s+less|maximum|max)?",
@@ -103,11 +101,7 @@ class ChatbotEngine:
             price_text = f"₹{price:,.2f}"
 
         if description:
-            return (
-                f"- {name}: "
-                f"{description} "
-                f"({price_text})"
-            )
+            return f"- {name}: {description} ({price_text})"
 
         return f"- {name} ({price_text})"
 
@@ -129,26 +123,18 @@ class ChatbotEngine:
             top_k=5,
         )
 
-        products = db.get_products_by_ids(
-            product_ids
-        )
+        products = db.get_products_by_ids(product_ids)
 
         # Apply budget filtering after retrieval.
         if budget is not None:
             products = [
                 product
                 for product in products
-                if (
-                    self._safe_price(product) is not None
-                    and self._safe_price(product) <= budget
-                )
+                if (self._safe_price(product) is not None and self._safe_price(product) <= budget)
             ]
 
         if products:
-            context = "\n".join(
-                self._format_product(product)
-                for product in products
-            )
+            context = "\n".join(self._format_product(product) for product in products)
         else:
             context = "No matching products found."
 

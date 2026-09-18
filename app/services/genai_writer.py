@@ -2,7 +2,6 @@
 
 from app.utils.llm_client import get_llm_client
 
-
 PROMPT_TEMPLATE = (
     "Generate a 3-sentence SEO-friendly product description "
     "(maximum 100 tokens) for the following product.\n\n"

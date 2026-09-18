@@ -126,11 +126,7 @@ class Settings:
             "http://localhost:3000",
         )
 
-        self.cors_origins = [
-            origin.strip()
-            for origin in cors_value.split(",")
-            if origin.strip()
-        ]
+        self.cors_origins = [origin.strip() for origin in cors_value.split(",") if origin.strip()]
 
     @staticmethod
     def _get_int(
