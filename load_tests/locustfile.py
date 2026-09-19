@@ -8,7 +8,7 @@ Headless run:
       --html=results/load_test.html
 """
 
-from locust import HttpUser, task, between
+from locust import HttpUser, between, task
 
 
 class MLServiceUser(HttpUser):

@@ -9,7 +9,6 @@ Selected via RETRIEVAL_MODE env var:
 """
 
 import logging
-from typing import Literal
 
 import numpy as np
 from rank_bm25 import BM25Okapi

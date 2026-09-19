@@ -4,6 +4,7 @@ Run:  python -m eval.retrieval_ablation
 """
 
 import os
+
 os.environ["REDIS_ENABLED"] = "false"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
 
@@ -55,15 +56,18 @@ def main():
         else:
             # Wrap async calls
             import asyncio
+
             class _Sync:
-                def __init__(self, h): self.h = h
+                def __init__(self, h):
+                    self.h = h
+
                 def get_recommendations_sync(self, q, top_k=K):
                     return asyncio.run(self.h.get_recommendations(q, top_k=top_k))
+
             metrics = _evaluate(_Sync(engine), TEST_QUERIES)
         metrics["config"] = mode
         rows.append(metrics)
-        print(f"  {mode:<16} NDCG@5 = {metrics['ndcg@5']:.3f}  "
-              f"MRR = {metrics['mrr']:.3f}")
+        print(f"  {mode:<16} NDCG@5 = {metrics['ndcg@5']:.3f}  MRR = {metrics['mrr']:.3f}")
 
     Path("results").mkdir(exist_ok=True)
     out = "results/retrieval_ablation.csv"
