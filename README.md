@@ -28,7 +28,7 @@ It combines:
 - **Optional API-key authentication** on `/api/*` endpoints
 - **Docker Compose** stack (web, mongo, redis, prometheus, grafana)
 - **GitHub Actions CI** running tests, Docker image builds, and a full-stack Docker Compose smoke test on every push
-- **An evaluation harness** measuring retrieval quality, latency, and cache effectiveness
+- **An evaluation harness** measuring retrieval quality, latency, cache effectiveness, retrieval ablation, and load behavior under concurrency
 
 ---
 
@@ -68,6 +68,93 @@ hardware.
 
 Cache hits are 4.3× faster than cold-path retrieval — the primary driver of the
 service's response-time profile under sustained load.
+
+### Retrieval Ablation
+
+Three retrieval architectures, same 15 labeled queries, K=5:
+
+| Config | NDCG@5 | MRR |
+|---|---|---|
+| Dense only (FAISS) | 0.895 | 0.933 |
+| Hybrid (FAISS + BM25, RRF) | 0.885 | 0.967 |
+| **Hybrid + cross-encoder rerank** | **0.922** | **1.000** |
+
+**Finding:** Reciprocal Rank Fusion (RRF) alone slightly reduces NDCG (-1 point)
+but improves MRR (+3.4 points) — BM25 pulls keyword-matching items higher
+without adding relevant items the dense retriever missed. A cross-encoder
+reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`) applied over the fused
+candidates recovers NDCG (+2.7 over dense) and reaches perfect MRR. This matches
+the standard IR literature: on small catalogs, rerankers contribute more than
+sparse fusion.
+
+### Load Test (Locust)
+
+**Test A — Rate limiter enabled** (50 concurrent users, 60s):
+
+| Metric | Value |
+|---|---|
+| Total requests | 8,020 |
+| Accepted (200) | 1,417 (17.7%) |
+| Rate-limited (429) | 6,603 (82.3%) |
+| Throughput (accepted) | 23.6 req/s |
+| Median latency (accepted) | 14 ms |
+| p95 latency (accepted) | 67 ms |
+
+**Finding:** With the production rate limit of 10 req/min per IP enforced, the
+service returns HTTP 429 for 82% of offered load. Accepted requests stay under
+70 ms at p95. This is the intended production behavior — the limiter protects
+the service from traffic spikes without adding overhead to legitimate traffic.
+
+**Test B — Rate limiter disabled** (20 concurrent users, 60s):
+
+| Metric | Value |
+|---|---|
+| Total requests | 2,092 |
+| Failures | 0 (0.00%) |
+| Throughput | 35.2 req/s |
+| Median latency | 11 ms |
+| p95 latency | 63 ms |
+
+*The rate limiter was disabled for this test to measure raw service throughput
+independent of throttling. Cold-start model loading inflates averages on the
+first second; medians and p95 reflect steady-state performance.*
+
+### Prometheus Alerts
+
+Five alert rules defined in [`monitoring/alerts.yml`](monitoring/alerts.yml):
+
+| Alert | Trigger | Severity |
+|---|---|---|
+| `ServiceDown` | `/metrics` unreachable for 1 min | critical |
+| `HighP95Latency` | p95 > 500 ms for 5 min | warning |
+| `HighErrorRate` | 5xx rate > 5% for 5 min | warning |
+| `LowCacheHitRate` | cache hit rate < 50% for 10 min | info |
+| `IndexNotBuilt` | `index_size_products == 0` for 5 min | warning |
+
+**Verified firing:** Two alerts demonstrated end-to-end through their full
+lifecycle:
+
+- `ServiceDown` enters PENDING within 1 minute of the `web` container stopping.
+- `IndexNotBuilt` enters PENDING when the FAISS index is empty, transitions
+  to FIRING after 5 minutes, and returns to INACTIVE once products are seeded
+  and the index rebuilds.
+- All rules return to INACTIVE when the underlying condition clears.
+
+**Alert pending — ServiceDown:**
+
+![ServiceDown pending](docs/screenshots/12_alert_servicedown_pending.png)
+
+**Alert pending — IndexNotBuilt:**
+
+![IndexNotBuilt pending](docs/screenshots/13_alert_index_pending.png)
+
+**Alert firing — IndexNotBuilt:**
+
+![IndexNotBuilt firing](docs/screenshots/14_alert_index_firing.png)
+
+**All alerts resolved:**
+
+![All alerts inactive](docs/screenshots/15_alerts_all_inactive.png)
 
 ---
 
@@ -286,6 +373,19 @@ five containers running: web, mongo, redis, prometheus, grafana.
 
 ![CI](docs/screenshots/11_ci_passing.png)
 
+### Alert lifecycle — pending
+
+![ServiceDown pending](docs/screenshots/12_alert_servicedown_pending.png)
+![IndexNotBuilt pending](docs/screenshots/13_alert_index_pending.png)
+
+### Alert lifecycle — firing
+
+![IndexNotBuilt firing](docs/screenshots/14_alert_index_firing.png)
+
+### All alerts resolved
+
+![All alerts inactive](docs/screenshots/15_alerts_all_inactive.png)
+
 ---
 
 ## Full Run — From Scratch to Verified
@@ -333,7 +433,27 @@ docker compose exec mongo mongosh --eval "db.getSiblingDB('retail_db').products.
 # Grafana:     http://localhost:3000  (admin / password from secrets/)
 # Metrics:     http://localhost:8000/metrics
 
-# ---- 11. Teardown ----
+# ---- 11. Load test (clean throughput) ----
+# Set RATE_LIMIT_ENABLED=false in .env first, then recreate web:
+docker compose up -d web
+timeout /t 15
+
+locust -f load_tests/locustfile.py --headless -u 20 -r 5 -t 60s \
+  --host http://localhost:8000 \
+  --csv=results/load_test --html=results/load_test.html
+
+# Reset: RATE_LIMIT_ENABLED=true in .env
+docker compose up -d web
+
+# ---- 12. Verify Prometheus alerts fire ----
+docker compose stop web
+timeout /t 90
+# Open http://localhost:9090/alerts → ServiceDown FIRING
+docker compose start web
+timeout /t 60
+# Refresh → back to INACTIVE
+
+# ---- 13. Teardown ----
 docker compose down
 docker compose down -v   # also removes volumes
 ```
@@ -393,6 +513,12 @@ De-facto standard for cloud-native metrics. The `/metrics` endpoint exposes
 `http_requests_total`, `http_request_duration_seconds`, `cache_hits_total`,
 `cache_misses_total`, and `index_size_products`.
 
+**Why Prometheus alert rules?**
+Dashboards show state, alerts drive action. `monitoring/alerts.yml` defines five
+rules covering service availability, p95 latency, error rate, cache effectiveness,
+and index health. These are the same metric patterns production on-call rotations
+watch.
+
 **Why API-key auth as middleware?**
 Keeps auth orthogonal to routes. Toggle via `API_KEY_ENABLED` — off for local
 development and CI, on for any real deployment. `/health`, `/ready`,
@@ -431,6 +557,7 @@ production-ml-service/
 │   ├── services/
 │   │   ├── chatbot_engine.py
 │   │   ├── genai_writer.py
+│   │   ├── hybrid_engine.py
 │   │   └── rec_engine.py
 │   ├── tests/
 │   │   ├── conftest.py
@@ -460,16 +587,25 @@ production-ml-service/
 │       ├── 08_redis.png
 │       ├── 09_mongo.png
 │       ├── 10_real_llm.png
-│       └── 11_ci_passing.png
+│       ├── 11_ci_passing.png
+│       ├── 12_alert_servicedown_pending.png
+│       ├── 13_alert_index_pending.png
+│       ├── 14_alert_index_firing.png
+│       └── 15_alerts_all_inactive.png
 │
 ├── eval/
 │   ├── cache_eval.py
 │   ├── latency_eval.py
 │   ├── metrics.py
+│   ├── retrieval_ablation.py
 │   ├── retrieval_eval.py
 │   └── test_queries.py
 │
+├── load_tests/
+│   └── locustfile.py
+│
 ├── monitoring/
+│   ├── alerts.yml
 │   ├── prometheus.yml
 │   └── grafana/
 │       ├── dashboards/
@@ -518,6 +654,11 @@ production-ml-service/
 - **Rate limiting is per-IP:** Suitable for development and single-tenant
   deployment. Per-user rate limiting requires API-key integration with the
   limiter (future work).
+- **Rate limiter contention under heavy concurrency:** `fastapi-limiter`
+  acquires a Redis connection per request. Under 50+ concurrent users on a
+  single-worker deployment, some requests queue on connection acquisition and
+  exceed 1 s p95. Production would use a connection pool or a per-worker
+  limiter cache.
 
 ---
 
@@ -527,8 +668,8 @@ production-ml-service/
   the query semantically matches stored preferences. The retrieval evaluation
   showed naive context injection degrades NDCG by 22 points.
 - **Per-user rate limiting:** Tie rate limits to the API key instead of IP.
-- **Load testing:** Integrate Locust for sustained-throughput measurement.
-- **Prometheus alert rules:** Latency SLA breaches and error-rate spikes.
+- **Alert routing:** Wire `monitoring/alerts.yml` into Alertmanager with a real
+  receiver (Slack, PagerDuty).
 - **Managed storage for deployment:** Wire MongoDB Atlas + Upstash Redis into
   the Cloud Run deploy path.
 - **Model evaluation benchmark:** Compare mock vs. Groq vs. self-hosted

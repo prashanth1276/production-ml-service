@@ -7,8 +7,8 @@ services:
     environment:
       MONGO_URI: mongodb://mongo:27017
       REDIS_URL: redis://redis:6379
-      RATE_LIMIT_ENABLED: "true"
-      REDIS_ENABLED: "true"
+      RATE_LIMIT_ENABLED: "${RATE_LIMIT_ENABLED:-true}"
+      REDIS_ENABLED: "${REDIS_ENABLED:-true}"
       API_KEY_ENABLED: ${API_KEY_ENABLED:-false}
       API_KEY: ${API_KEY:-}
       LLM_BACKEND: ${LLM_BACKEND:-mock}
@@ -74,6 +74,7 @@ services:
     image: prom/prometheus:latest
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"

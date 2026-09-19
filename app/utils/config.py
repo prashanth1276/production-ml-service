@@ -115,6 +115,12 @@ class Settings:
             False,
         )
 
+        # ----------------------------------------------------
+        # Retrieval mode
+        # ----------------------------------------------------
+
+        self.retrieval_mode = os.getenv("RETRIEVAL_MODE", "dense").lower()
+
         self.api_key = os.getenv("API_KEY", "")
 
         # ----------------------------------------------------
